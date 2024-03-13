@@ -17,7 +17,7 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
 
-    return true;
+    return (bool)ststem(cmd);
 }
 
 /**
@@ -58,6 +58,23 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+
+    int pid = fork();
+    
+    if(pid < 0){
+        exit(-1);
+    }else if(pid == 0){
+        execv(command[0], command);
+        exit(0);
+    }else{
+        int status;
+        wait(&status);
+        if(status == 0){
+            return true;
+        }else{
+            return false;
+        }
+    }
 
     va_end(args);
 
