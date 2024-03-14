@@ -16,8 +16,8 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
-
-    return (bool)ststem(cmd);
+    int r = system(cmd);
+    return r == 0 ? true : false;
 }
 
 /**
@@ -64,8 +64,13 @@ bool do_exec(int count, ...)
     if(pid < 0){
         exit(-1);
     }else if(pid == 0){
-        execv(command[0], command);
-        exit(0);
+        //char **tmp = &command[1]; 
+        if(access(command[0], F_OK)){
+            execv(command[0], command);
+        }else{
+            exit(-1);
+        }
+        
     }else{
         int status;
         wait(&status);
@@ -109,6 +114,33 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+    int kidpid = fork();
+    int fd, status;
+    switch(kidpid){
+        case -1 :
+            exit(-1);
+            break;
+        case 0 :
+            fd = open(outputfile, O_WRONLY | O_TRUNC | O_CREAT, 0777);
+            if(fd == -1){
+                perror("open file fail");
+                exit(-1);
+            }
+            dup2(1, fd);
+            close(fd);
+            execv(command[0], command);
+            break;
+        default :
+            wait(&status);
+            switch(status){
+                case 0 :
+                    return true;
+                    break;
+                default :
+                    return false;
+                    break;
+            }
+    }
 
     va_end(args);
 
