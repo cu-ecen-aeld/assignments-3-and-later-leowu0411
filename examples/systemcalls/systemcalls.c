@@ -64,17 +64,17 @@ bool do_exec(int count, ...)
     if(pid < 0){
         exit(-1);
     }else if(pid == 0){
-        //char **tmp = &command[1]; 
-        if(access(command[0], F_OK)){
-            execv(command[0], command);
-        }else{
-            exit(-1);
-        }
+         
+        execv(command[0], command);
+
+        perror("execv fail");
+        exit(-1);
         
     }else{
         int status;
         wait(&status);
-        if(status == 0){
+
+        if(WIFEXITED(status) && WEXITSTATUS(status) == 0){
             return true;
         }else{
             return false;
@@ -105,6 +105,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
     command[count] = command[count];
+    
 
 
 /*
@@ -114,32 +115,34 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
-    int kidpid = fork();
+    pid_t kidpid = fork();
     int fd, status;
     switch(kidpid){
         case -1 :
+            perror("fork faild");
             exit(-1);
             break;
         case 0 :
-            fd = open(outputfile, O_WRONLY | O_TRUNC | O_CREAT, 0777);
+            fd = open(outputfile, O_RDWR);
             if(fd == -1){
                 perror("open file fail");
                 exit(-1);
             }
-            dup2(1, fd);
+            dup2(fd, 1);
             close(fd);
             execv(command[0], command);
+
+            perror("ececv failed...");
+            exit(-1);
             break;
         default :
             wait(&status);
-            switch(status){
-                case 0 :
-                    return true;
-                    break;
-                default :
-                    return false;
-                    break;
+            if(WIFEXITED(status) && WEXITSTATUS(status) == 0){
+                return true;
+            }else{
+                return false;
             }
+            break;
     }
 
     va_end(args);
